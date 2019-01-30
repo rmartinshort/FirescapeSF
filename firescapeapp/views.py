@@ -95,6 +95,8 @@ def generate_hazard_map_html(model,X,mapdata,html_map_name,plat,plon,firetype='s
                               angle=0,
                               prefix='fa')).add_to(m)
 
+    folium.LayerControl().add_to(m)
+
     m.save('firescapeapp/templates/'+html_map_name)
 
     return prob, high_risk
