@@ -17,7 +17,7 @@
   <p class="lead">Enter an address to learn more about fire risk in your local area</p>
 
   {% if year == '2018' %}
-    <p> The map shows predicted hazard zones for {{year}} in addition to the locations of fires that actually happened </p> 
+    <p> The map shows predicted hazard scores for {{year}} in addition to the locations of fires that actually happened </p> 
   {% endif %}
 
   {% if address_flag == 1 %}
@@ -27,6 +27,8 @@
     <p> You entered {{address}}, which has a risk score of {{riskscore}} </p> 
     {% endif %}
   {% endif %}
+
+  <p> The 'hazard score' is an assessment of fire probabilty. Blocks designated 'high risk' are those that the model predicts will experience fire within the given year. </p>
 
   <hr class="my-4">
 
