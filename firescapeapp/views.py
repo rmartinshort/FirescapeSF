@@ -10,8 +10,9 @@ import numpy as np
 import folium
 from branca.utilities import split_six
 from shapely.geometry import Point
-from firescapeapp import app
+import firescapeapp 
 
+app = firescapeapp.app
 
 
 def generate_hazard_map_html(model,X,mapdata,html_map_name,plat,plon,firetype='structure'):
@@ -27,13 +28,23 @@ def generate_hazard_map_html(model,X,mapdata,html_map_name,plat,plon,firetype='s
     '''
 
     GISCELLS = list(X['GISYEARJOIN'])
-    X.drop(['GISYEARJOIN','SF_pred','VF_pred','EF_pred'],axis=1,inplace=True)
+    hazdata = X.drop(['GISYEARJOIN','SF_pred','VF_pred','EF_pred'],axis=1)
     mapgeom = mapdata[mapdata['GISYEARJOI'].isin(GISCELLS)]
-    fires_holdout_predict = model.predict_proba(X)
+    fires_holdout_predict = model.predict_proba(hazdata)
 
-    fscore = 10.0*fires_holdout_predict[:,1]
+    fscore = 10.0*fires_holdout_predict[:,1]/max(fires_holdout_predict[:,1])
+    if firetype == 'structure':
+        vallim = sorted(fscore)[::-1][firescapeapp.blocks_SF]
+    elif firetype == 'vehicle':
+        vallim = sorted(fscore)[::-1][firescapeapp.blocks_VF]
+    elif firetype == 'external':
+        vallim = sorted(fscore)[::-1][firescapeapp.blocks_EF]
 
-    riskmap = gpd.GeoDataFrame({'geometry':mapgeom['geometry'],'fire_prob':fscore})
+    fscoreHI = fscore.copy()
+    fscoreHI[fscoreHI<=vallim]=0
+    fscoreHI[fscoreHI>vallim]=1
+
+    riskmap = gpd.GeoDataFrame({'geometry':mapgeom['geometry'],'fire_prob':fscore,'highrisk':fscoreHI})
 
     #Find out which polygon contains a point of interest
     mypoint = Point(plon,plat)
@@ -45,24 +56,10 @@ def generate_hazard_map_html(model,X,mapdata,html_map_name,plat,plon,firetype='s
 
     #prob of fire at the entered address
     prob = riskmap['fire_prob'].values[i]
-
-    if firetype == 'structure':
-        if prob > 0.954:
-            high_risk = 1
-        else:
-            high_risk = 0
-
-    elif firetype == 'vehicle':
-        if prob > 0.779:
-            high_risk = 1
-        else:
-            high_risk = 0
-
-    elif firetype == 'external':
-        if prob > 1.80:
-            high_risk = 1
-        else:
-            high_risk = 0
+    if prob >= vallim:
+        high_risk = 1
+    else:
+        high_risk = 0
 
 
     riskmap['BLOCKID'] = np.arange(len(riskmap))
@@ -74,15 +71,30 @@ def generate_hazard_map_html(model,X,mapdata,html_map_name,plat,plon,firetype='s
               width='100%',
               height='100%')
 
-    m.choropleth(geo_data=gdf_wgs84.to_json(),data=riskmap,columns=['BLOCKID','fire_prob'],
-             key_on = 'feature.properties.{}'.format('BLOCKID'),
-             max_zoom=16,
-             fill_opacity=0.8,
-             fill_color='OrRd',
-             line_opacity=0.1,
-             highlight=True,
-             legend_name='Fire risk score',
-             )
+    #Fill in the high risk zone
+    folium.Choropleth(
+        name = 'High risk zone',
+        geo_data=gdf_wgs84[gdf_wgs84['highrisk']==1].to_json(),
+        key_on = 'feature.properties.{}'.format('BLOCKID'),
+        max_zoom=16,
+        fill_opacity=0.5,
+        fill_color='#ff0000',
+        line_opacity=0.1,
+        highlight=True,
+        ).add_to(m)
+
+    #Fill in the risk score
+    folium.Choropleth(
+        show=False,
+        name='Fire risk score',
+        geo_data=gdf_wgs84.to_json(),data=riskmap,columns=['BLOCKID','fire_prob'],
+        key_on = 'feature.properties.{}'.format('BLOCKID'),
+        max_zoom=16,
+        fill_opacity=0.8,
+        fill_color='YlOrRd',
+        line_opacity=0.1,
+        highlight=True,
+        legend_name='Fire risk score').add_to(m)
 
     m.add_child(folium.LatLngPopup())
 
@@ -101,19 +113,18 @@ def generate_hazard_map_html(model,X,mapdata,html_map_name,plat,plon,firetype='s
 
     return prob, high_risk
 
-
 def withinSF(lon,lat):
 
     '''
     Check if a user's address is within the region of interest
     '''
 
-    if (-122.53 < lon < -122.35 ) and (37.7 < lat < 37.84 ):
-
-        return 1
-
-    else:
-
+    try:
+        if (-122.53 < lon < -122.35 ) and (37.7 < lat < 37.84 ):
+            return 1
+        else:
+            return 0
+    except:
         return 0
 
 @app.route('/')
@@ -137,7 +148,7 @@ def displaymapwithaddress(firetype='structure',yearval='2019'):
     geolocator = Nominatim(user_agent="FirescapeSF")
 
     #Load SF_yearblocks
-    SF_blocks = gpd.read_file('firescapeapp/models/SFblocks/SF_block_years_2010.shp')
+    #SF_blocks = gpd.read_file('firescapeapp/models/SFblocks/SF_block_years_2010.shp')
 
     rendertemp = 'FireRisk-map.html'
 
@@ -146,8 +157,20 @@ def displaymapwithaddress(firetype='structure',yearval='2019'):
     #Eventually want to call Folium map that has been generated for this specific address
     foliummap = '%s_%s_address.html' %(firetype,yearval)
 
-    modeltoload = 'firescapeapp/models/Model_RC_'+firetype+'.sav' #Specific model for the fire type
-    datatoload = 'firescapeapp/models/datasets/'+yearval+'_predictfires.csv' #Specific model for the year of fire
+    if firetype == 'structure':
+        model = firescapeapp.SFmodel
+    elif firetype == 'external':
+        model = firescapeapp.EFmodel
+    elif firetype == 'vehicle':
+        model = firescapeapp.VFmodel
+
+    if yearval == '2019':
+        data = firescapeapp.pred2019data
+    elif yearval == '2018':
+        data = firescapeapp.pred2018data
+
+    #modeltoload = 'firescapeapp/models/Model_RC_'+firetype+'.sav' #Specific model for the fire type
+    #datatoload = 'firescapeapp/models/datasets/'+yearval+'_predictfires.csv' #Specific model for the year of fire
 
     address = request.args.get('myaddress')
 
@@ -156,21 +179,26 @@ def displaymapwithaddress(firetype='structure',yearval='2019'):
 
     #print("You entered address %s" %address)
     location = geolocator.geocode(address)
-    loclat = location.latitude
-    loclon = location.longitude
+    try:
+        loclat = location.latitude
+        loclon = location.longitude
+    except:
+        return render_template('error404.html')
+
+    if not withinSF(loclon,loclat):
+        return render_template('error404.html')
 
     #Now we generate the appropriate map
 
     #Load the appropriate model and appropriate data 
-    model = pickle.load(open(modeltoload, 'rb'))
-    data = pd.read_csv(datatoload)
+    #model = pickle.load(open(modeltoload, 'rb'))
+    #data = pd.read_csv(datatoload)
 
     #Generate the hazard map
-    prob, high_risk = generate_hazard_map_html(model,data,SF_blocks,foliummap,plat=loclat,plon=loclon)
+    prob, high_risk = generate_hazard_map_html(model,data,firescapeapp.SF_blocks,foliummap,plat=loclat,plon=loclon)
 
     #convert to string of reasonable accuracy 
     prob = '%.2f' %prob
-
 
     return render_template(rendertemp,year=yearval,firetype=firetype,
         mapname=foliummap,high_risk=high_risk,address_flag=1,address=address,riskscore=prob)

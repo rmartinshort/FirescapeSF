@@ -22,13 +22,13 @@
 
   {% if address_flag == 1 %}
     {% if high_risk == 1 %}
-    <p> You entered {{address}}, which has a risk score of {{riskscore}}. This is a high risk area! </p> 
+    <p> You entered <b>{{address}}</b>, which has a fire risk score of <b>{{riskscore}}</b>. This is a high risk area! </p> 
     {% elif high_risk == 0 %}
-    <p> You entered {{address}}, which has a risk score of {{riskscore}} </p> 
+    <p> You entered {{address}}, which has a fire risk score of </b>{{riskscore}}</b> </p> 
     {% endif %}
   {% endif %}
 
-  <p> The 'hazard score' is an assessment of fire probabilty. Blocks designated 'high risk' are those that the model predicts will experience fire within the given year. </p>
+  <p> The 'risk score' is an assessment of fire probabilty. Blocks designated 'high risk' are those that the model predicts will experience fire within the given year. They are colored red. </p>
 
   <hr class="my-4">
 
