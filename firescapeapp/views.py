@@ -158,16 +158,29 @@ def displaymapwithaddress(firetype='structure',yearval='2019'):
     foliummap = '%s_%s_address.html' %(firetype,yearval)
 
     if firetype == 'structure':
-        model = firescapeapp.SFmodel
+        if yearval == '2017':
+            model = firescapeapp.SFmodel2017
+        else:
+            model = firescapeapp.SFmodel2018
+
     elif firetype == 'external':
-        model = firescapeapp.EFmodel
+        if yearval == '2017':
+            model = firescapeapp.EFmodel2017
+        else:
+            model = firescapeapp.EFmodel2018
+
     elif firetype == 'vehicle':
-        model = firescapeapp.VFmodel
+        if yearval == '2017':
+            model = firescapeapp.VFmodel2017
+        else:
+            model = firescapeapp.VFmodel2018
 
     if yearval == '2019':
         data = firescapeapp.pred2019data
     elif yearval == '2018':
         data = firescapeapp.pred2018data
+    elif yearval == '2017':
+        data = firescapeapp.pred2017data
 
     #modeltoload = 'firescapeapp/models/Model_RC_'+firetype+'.sav' #Specific model for the fire type
     #datatoload = 'firescapeapp/models/datasets/'+yearval+'_predictfires.csv' #Specific model for the year of fire
