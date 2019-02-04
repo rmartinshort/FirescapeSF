@@ -32,7 +32,7 @@ def generate_hazard_map_html(model,X,mapdata,html_map_name,plat,plon,firetype='s
     mapgeom = mapdata[mapdata['GISYEARJOI'].isin(GISCELLS)]
     fires_holdout_predict = model.predict_proba(hazdata)
 
-    fscore = 10.0*fires_holdout_predict[:,1]/max(fires_holdout_predict[:,1])
+    fscore = 10.0*fires_holdout_predict[:,1]
     if firetype == 'structure':
         vallim = sorted(fscore)[::-1][firescapeapp.blocks_SF]
     elif firetype == 'vehicle':
@@ -55,7 +55,7 @@ def generate_hazard_map_html(model,X,mapdata,html_map_name,plat,plon,firetype='s
             break
 
     #prob of fire at the entered address
-    prob = riskmap['fire_prob'].values[i]
+    prob = riskmap['fire_prob'].values[i].round()
     if prob >= vallim:
         high_risk = 1
     else:
