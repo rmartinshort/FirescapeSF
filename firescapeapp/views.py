@@ -6,6 +6,7 @@ import pickle
 import geopandas as gpd
 import pandas as pd
 import numpy as np
+import os
 
 import folium
 from branca.utilities import split_six
@@ -13,6 +14,7 @@ from shapely.geometry import Point
 import firescapeapp 
 
 app = firescapeapp.app
+locfile = open('loclog.dat','w')
 
 
 def generate_hazard_map_html(model,X,mapdata,html_map_name,plat,plon,firetype='structure'):
@@ -48,6 +50,7 @@ def generate_hazard_map_html(model,X,mapdata,html_map_name,plat,plon,firetype='s
 
     #Find out which polygon contains a point of interest
     mypoint = Point(plon,plat)
+    #print(mypoint.x,mypoint.y)
     geoms = list(riskmap['geometry'])
     for i in range(len(geoms)):
         ping = geoms[i].contains(mypoint)
@@ -109,6 +112,11 @@ def generate_hazard_map_html(model,X,mapdata,html_map_name,plat,plon,firetype='s
 
     folium.LayerControl().add_to(m)
 
+
+    #print('removing and remaking firescapeapp/templates/%s' %html_map_name)
+
+    #os.system('rm firescapeapp/templates/%s' %html_map_name)
+
     m.save('firescapeapp/templates/'+html_map_name)
 
     return prob, high_risk
@@ -152,7 +160,7 @@ def displaymapwithaddress(firetype='structure',yearval='2019'):
 
     rendertemp = 'FireRisk-map.html'
 
-    print(rendertemp,firetype,yearval)
+    #print(rendertemp,firetype,yearval)
 
     #Eventually want to call Folium map that has been generated for this specific address
     foliummap = '%s_%s_address.html' %(firetype,yearval)
@@ -207,11 +215,17 @@ def displaymapwithaddress(firetype='structure',yearval='2019'):
     #model = pickle.load(open(modeltoload, 'rb'))
     #data = pd.read_csv(datatoload)
 
+    os.system('rm firescapeapp/templates/*address*')
+    locfile.write('%s %s\n' %(loclat,loclon))
+    
+    #Eventually want to call Folium map that has been generated for this specific address
+    foliummap = '%s_%s_address_%s_%s.html' %(firetype,yearval,loclat,loclon)
+
     #Generate the hazard map
     prob, high_risk = generate_hazard_map_html(model,data,firescapeapp.SF_blocks,foliummap,plat=loclat,plon=loclon)
 
     #convert to string of reasonable accuracy 
-    prob = '%.2f' %prob
+    prob = '%.1f' %prob
 
     return render_template(rendertemp,year=yearval,firetype=firetype,
         mapname=foliummap,high_risk=high_risk,address_flag=1,address=address,riskscore=prob)
