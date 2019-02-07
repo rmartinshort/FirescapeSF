@@ -10,6 +10,8 @@
 {% block body %}
    <nav class="navbar navbar-expand-lg navbar-light bg-light">
       <a class="navbar-brand" href="{{url_for('index')}}">FirescapeSF</a>
+      <a class="navbar-brand" href="{{url_for('get_slides')}}">Presentation slides</a>
+      <a class="navbar-brand" href="https://github.com/rmartinshort/FirescapeSF">Code on Github</a>
    </nav>
 
   <div class="jumbotron jumbotron-fluid" style="background:transparent !important">
@@ -24,7 +26,8 @@
     {% if high_risk == 1 %}
     <p> You entered <b>{{address}}</b>, which has a fire risk score of <b>{{riskscore}}</b>. This is a high risk area! </p> 
     {% elif high_risk == 0 %}
-    <p> You entered {{address}}, which has a fire risk score of </b>{{riskscore}}</b> </p> 
+    <p> You entered <b>{{address}}</b>, which has a fire risk score of <b>{{riskscore}}</b> </p>
+    <p> Note that risk scores are rounded to the nearest whole number </p>
     {% endif %}
   {% endif %}
 
@@ -32,9 +35,15 @@
 
   <hr class="my-4">
 
-  <a type="button" href="{{url_for('displayamap',yearval=year, firetype='structure')}}" class="btn btn-outline-dark">Structural fires</a>
-  <a type="button" href="{{url_for('displayamap',yearval=year, firetype='vehicle')}}" class="btn btn-outline-dark">Vehicle fires</a>
-  <a type="button" href="{{url_for('displayamap',yearval=year, firetype='external')}}" class="btn btn-outline-dark">External fires</a>
+
+  <center>
+
+  <a role="button" href="{{url_for('displayamap',yearval=year, firetype='structure')}}" class="btn btn-outline-secondary btn-lg"><h3>Structural fires</h3></a>
+  <a role="button" href="{{url_for('displayamap',yearval=year, firetype='vehicle')}}" class="btn btn-outline-secondary btn-lg"><h3>Vehicle fires</h3></a>
+  <a role="button" href="{{url_for('displayamap',yearval=year, firetype='external')}}" class="btn btn-outline-secondary btn-lg"><h3>External fires</h3></a>
+
+  </center>
+
 
   <hr class="my-4">
 
